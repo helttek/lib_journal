@@ -35,23 +35,18 @@ public:
 
     std::variant<T, Command> front()
     {
-        const std::unique_lock<std::mutex> lock(mutex);
-        if (q.empty())
-        {
-            condvar.wait();
-        }
-        
+        std::unique_lock<std::mutex> lock(mutex);
+        condvar.wait(lock, [this]()
+                     { return !q.empty(); });
         return q.front();
     }
 
     std::variant<T, Command> back()
     {
-        const std::unique_lock<std::mutex> lock(mutex);
-        if (q.empty())
-        {
-            condvar.wait();
-        }
-        
+        std::unique_lock<std::mutex> lock(mutex);
+        condvar.wait(lock, [this]()
+                     { return !q.empty(); });
+
         return q.back();
     }
 
@@ -65,6 +60,15 @@ public:
     {
         const std::lock_guard<std::mutex> lock(mutex);
         return q.size();
+    }
+
+    void pop()
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        condvar.wait(lock, [this]()
+                     { return !q.empty(); });
+
+        q.pop();
     }
 
 private:
