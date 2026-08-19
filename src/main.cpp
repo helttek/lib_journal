@@ -1,16 +1,15 @@
 #include <iostream>
-#include <csignal>
 #include "libjournal.hpp"
-
-extern "C" void signal_handler(int signal_number)
-{
-    if (signal_number == SIGINT)
-    {
-        // stop the program
-    }
-}
+#include <thread>
+#include <vector>
+#include "ThreadSafeQueue.hpp"
+#include <string>
+#include <variant>
+#include "WorkerThread.hpp"
+#include "SignalAction.hpp"
 
 int threads_count = 3;
+ThreadSafeQueue<std::unique_ptr<std::string>> queue;
 
 int main(int argc, char const *argv[])
 {
@@ -21,30 +20,37 @@ int main(int argc, char const *argv[])
     }
     std::string journal_name(argv[1]), default_message_importance(argv[2]);
 
-    // load the library + create libjournal object
-    Journal journal;
-
-    // setup signal handler
-    struct sigaction action;
-    action.sa_handler = signal_handler;
-    sigemptyset(&action.sa_mask);
-    action.sa_flags = 0;
-    // if (sigaction(SIGINT, &action, nullptr) < 0)
-    // {
-    //     std::cerr << "WARNING: Failed to setup SIGINT handler." << std::endl;
-    //     return 1;
-    // }
-
-    for (int i = 0; i < threads_count; i++)
+    try
     {
-        // init threads that will be adding messages to journal
+        setup_sigint_handler();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "WARNING: Failed to setup SIGINT handler: " << e.what() << '\n';
     }
 
-    // start listening for user input
+    Journal journal;
+
+    // start threads
+    std::vector<std::thread> threads;
+    threads.reserve(threads_count);
+    for (int i = 0; i < threads_count; i++)
+    {
+        threads.emplace_back(worker_thread, std::ref(journal), std::ref(queue));
+        threads.back().detach();
+    }
+
     while (true)
     {
-        // input format: importance: <importance>\nmessage: <message>\n
-        // use unique pointer and move to not block the main thread
+        // input format: "importance: <importance>\ntext: <message>\n"
+        std::string importance, msg;
+        std::cout << "importance: ";
+        std::getline(std::cin, importance, '\n');
+        std::cout << "text: ";
+        std::getline(std::cin, msg, '\n');
+        std::cout << "------------------------------------------------" << std::endl;
+        std::unique_ptr<std::string> message = std::make_unique<std::string>(importance + '\n' + msg);
+        queue.push(std::move(message));
     }
 
     return EXIT_SUCCESS;
