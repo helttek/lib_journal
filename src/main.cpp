@@ -29,8 +29,26 @@ int main(int argc, char const *argv[])
         std::cerr << "WARNING: Failed to setup SIGINT handler: " << e.what() << '\n';
     }
 
-    jnl::Journal journal;
-    // TODO: create an object with the right constructor option
+    jnl::Priority default_priority;
+    if (default_message_importance == "LOW")
+    {
+        default_priority = jnl::Priority::LOW;
+    }
+    else if (default_message_importance == "MIDDLE")
+    {
+        default_priority = jnl::Priority::MIDDLE;
+    }
+    else if (default_message_importance == "HIGH")
+    {
+        default_priority = jnl::Priority::HIGH;
+    }
+    else
+    {
+        std::cerr << "WARNING: unknown priority '" << default_message_importance
+                  << "', using HIGH as default.\n";
+        default_priority = jnl::Priority::HIGH;
+    }
+    jnl::Journal journal(journal_name, default_priority);
 
     // start threads
     std::vector<std::thread> threads;
