@@ -29,7 +29,8 @@ int main(int argc, char const *argv[])
         std::cerr << "WARNING: Failed to setup SIGINT handler: " << e.what() << '\n';
     }
 
-    Journal journal;
+    jnl::Journal journal;
+    // TODO: create an object with the right constructor option
 
     // start threads
     std::vector<std::thread> threads;

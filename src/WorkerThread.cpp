@@ -1,6 +1,6 @@
 #include "WorkerThread.hpp"
 
-void worker_thread(Journal &journal, ThreadSafeQueue<std::unique_ptr<std::string>> &queue)
+void worker_thread(jnl::Journal &journal, ThreadSafeQueue<std::unique_ptr<std::string>> &queue)
 {
     while (true)
     {
