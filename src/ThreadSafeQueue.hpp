@@ -7,8 +7,7 @@
 
 enum Command
 {
-    THREAD_CANCEL,
-    THREAD_PROCESS
+    THREAD_CANCEL
 };
 
 template <typename T>
