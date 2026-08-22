@@ -1,98 +1,49 @@
 #pragma once
 
-#include <thread>
+#include <memory>
+#include <optional>
 #include <string>
-#include "../src/ThreadSafeQueue.hpp"
-#include <fstream>
-#include <system_error>
+#include <string_view>
 
 namespace jnl
 {
 
-    enum Priority
+    enum class Priority
     {
-        LOW,
-        MIDDLE,
-        HIGH
+        LOW = 0,
+        MIDDLE = 1,
+        HIGH = 2
     };
 
-    constexpr std::string_view to_string(Priority prio)
-    {
-        switch (prio)
-        {
-        case jnl::Priority::HIGH:
-            return "HIGH";
+    std::string_view to_string(Priority priority) noexcept;
 
-        case jnl::Priority::MIDDLE:
-            return "MIDDLE";
+    std::optional<Priority> parse_priority(const std::string &name);
 
-        case jnl::Priority::LOW:
-            return "LOW";
-
-        default:
-            return "";
-        }
-    }
-
-    Priority str2prio(Journal journal, std::string str);
-}
-
-namespace
-{
-    class msg
-    {
-    private:
-        std::string text;
-        jnl::Priority priority;
-
-    public:
-        msg(std::string &text, jnl::Priority priority) : text(text), priority(priority) {}
-
-        jnl::Priority get_priority();
-
-        std::string_view get_text();
-    };
-}
-
-namespace jnl
-{
     class Journal
     {
-    private:
-        std::string file_name;
-        Priority default_priority;
-        ThreadSafeQueue<msg> queue;
-        std::ofstream file;
-        std::thread writer_thread;
-
-        void writer();
-
     public:
-        Journal() = default;
+        Journal(const std::string &name, Priority default_priority);
 
-        ~Journal()
-        {
-            queue.push(Command::THREAD_CANCEL);
-        }
+        explicit Journal(const std::string &name);
 
-        Journal(std::string name) : Journal(name, Priority::HIGH) {}
+        ~Journal();
 
-        Journal(std::string name, Priority priority) : file_name(name), queue(), default_priority(priority), file(file_name, std::ios::out | std::ios::app), writer_thread([this]()
-                                                                                                                                                                           { writer(); })
-        {
-            if (!file.is_open())
-            {
-                throw std::runtime_error("ERROR: Cannot open log file: " + file_name);
-            }
-            writer_thread.detach();
-        }
+        Journal(const Journal &) = delete;
+        Journal &operator=(const Journal &) = delete;
 
-        void log(jnl::Priority prio, std::string text);
+        void log(Priority priority, std::string text);
 
         void log(std::string text);
 
-        void set_default_priority(Priority prio);
+        void set_default_priority(Priority priority) noexcept;
 
-        Priority get_default_priority();
+        Priority get_default_priority() const noexcept;
+
+        bool good() const noexcept;
+
+    private:
+        struct Impl;
+        std::unique_ptr<Impl> impl_;
     };
+
 } // namespace jnl

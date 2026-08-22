@@ -1,64 +1,53 @@
 #pragma once
 
-#include <queue>
-#include <mutex>
 #include <condition_variable>
-#include <variant>
-
-enum Command
-{
-    THREAD_CANCEL
-};
+#include <mutex>
+#include <optional>
+#include <queue>
+#include <utility>
 
 template <typename T>
 class ThreadSafeQueue
 {
 public:
-    ThreadSafeQueue() : q(), mutex(), condvar() {}
+    ThreadSafeQueue() = default;
 
-    void push(T &&value)
+    ThreadSafeQueue(const ThreadSafeQueue &) = delete;
+    ThreadSafeQueue &operator=(const ThreadSafeQueue &) = delete;
+
+    void push(T value)
     {
         {
-            const std::lock_guard<std::mutex> lock(mutex);
-            q.push(std::move(value));
+            const std::lock_guard<std::mutex> lock(mutex_);
+            queue_.push(std::move(value));
         }
-        condvar.notify_one();
+        condvar_.notify_one();
     }
 
-    void push(const Command command)
+    void close()
     {
         {
-            const std::lock_guard<std::mutex> lock(mutex);
-            q.push(command);
+            const std::lock_guard<std::mutex> lock(mutex_);
+            closed_ = true;
         }
-        condvar.notify_one();
+        condvar_.notify_all();
     }
 
-    std::variant<T, Command> pop()
+    std::optional<T> pop()
     {
-        std::unique_lock<std::mutex> lock(mutex);
-        condvar.wait(lock, [this]()
-                     { return !q.empty(); });
-        auto item = std::move(q.front());
-        q.pop();
-        return item;
-    }
-
-    bool empty() const
-    {
-        const std::lock_guard<std::mutex> lock(mutex);
-        return q.empty();
-    }
-
-    typename std::queue<std::variant<T, Command>>::size_type size() const
-    {
-        const std::lock_guard<std::mutex> lock(mutex);
-        return q.size();
+        std::unique_lock<std::mutex> lock(mutex_);
+        condvar_.wait(lock, [this]
+                      { return closed_ || !queue_.empty(); });
+        if (queue_.empty())
+            return std::nullopt;
+        T value = std::move(queue_.front());
+        queue_.pop();
+        return value;
     }
 
 private:
-    /** Command - тип команды потоку, например завершиться. */
-    std::queue<std::variant<T, Command>> q;
-    std::mutex mutex;
-    std::condition_variable condvar;
+    std::queue<T> queue_;
+    mutable std::mutex mutex_;
+    std::condition_variable condvar_;
+    bool closed_ = false;
 };
