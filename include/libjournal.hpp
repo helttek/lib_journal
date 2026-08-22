@@ -34,7 +34,7 @@ namespace jnl
         }
     }
 
-    Priority str2prio(std::string str);
+    Priority str2prio(Journal journal, std::string str);
 }
 
 namespace
@@ -78,7 +78,7 @@ namespace jnl
         Journal(std::string name) : Journal(name, Priority::HIGH) {}
 
         Journal(std::string name, Priority priority) : file_name(name), queue(), default_priority(priority), file(file_name, std::ios::out | std::ios::app), writer_thread([this]()
-                                                                                                                                                                                { writer(); })
+                                                                                                                                                                           { writer(); })
         {
             if (!file.is_open())
             {
@@ -88,5 +88,11 @@ namespace jnl
         }
 
         void log(jnl::Priority prio, std::string text);
+
+        void log(std::string text);
+
+        void set_default_priority(Priority prio);
+
+        Priority get_default_priority();
     };
 } // namespace jnl

@@ -21,7 +21,7 @@ void worker_thread(jnl::Journal &journal, ThreadSafeQueue<std::unique_ptr<std::s
         std::stringstream stream(*std::get<std::unique_ptr<std::string>>(item));
         std::string priority, text;
         std::getline(stream, priority, '\n');
-        jnl::Priority prio = jnl::str2prio(priority);
+        jnl::Priority prio = jnl::str2prio(journal, priority);
         std::getline(stream, text, '\n');
         journal.log(prio, text);
     }

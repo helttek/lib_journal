@@ -5,7 +5,7 @@
 #include <chrono>
 #include <iomanip>
 
-jnl::Priority jnl::str2prio(std::string str)
+jnl::Priority jnl::str2prio(jnl::Journal journal, std::string str)
 {
     if (str == "LOW")
     {
@@ -21,7 +21,7 @@ jnl::Priority jnl::str2prio(std::string str)
     }
     else
     {
-        return jnl::Priority::HIGH;
+        return journal.get_default_priority();
     }
 }
 
@@ -42,6 +42,11 @@ void jnl::Journal::log(jnl::Priority prio, std::string text)
         return;
     }
     queue.push(msg(text, prio));
+}
+
+void jnl::Journal::log(std::string text)
+{
+    log(default_priority, text);
 }
 
 void jnl::Journal::writer()
@@ -70,4 +75,14 @@ void jnl::Journal::writer()
     }
     file.flush();
     return;
+}
+
+void jnl::Journal::set_default_priority(Priority prio)
+{
+    default_priority = prio;
+}
+
+jnl::Priority jnl::Journal::get_default_priority()
+{
+    return default_priority;
 }
